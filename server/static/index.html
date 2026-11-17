@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>پرونده‌های کارشناسی خودرو</title>
+<style>
+:root{--ink:#1d2b3a;--muted:#667585;--line:#d8dee4;--bg:#f2f4f6;--brand:#8a6a12;--gold:#c9a227;--bad:#b3402e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Vazirmatn,Tahoma,system-ui,sans-serif;line-height:1.7}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:1.2rem;margin:0 0 12px}
+h3{font-size:1rem;margin:20px 0 6px}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+button.p{background:var(--brand);color:#fff;border-color:var(--brand)}
+button.d{color:var(--bad)}
+input,textarea{font:inherit;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+input[type=checkbox]{width:22px;height:22px;padding:0;margin-inline-end:6px;vertical-align:middle}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:2px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.item{display:block;width:100%;text-align:start;background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:8px}
+.item b{font-size:1.05rem}.item span{color:var(--muted);font-size:.85rem;display:block}
+.rowbox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px}
+.rowbox b{display:block;margin-bottom:4px}
+.rowbox .ck{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.rowbox .ck label{font-size:.9rem;color:var(--ink);display:flex;align-items:center}
+.err{color:var(--bad);min-height:1.5em}
+.sheet{background:#fff;border:2px solid var(--gold);border-radius:8px;padding:18px;font-size:.9rem}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.title{text-align:center;flex:1}.title h2{margin:0;font-size:1.35rem}
+.meta{font-size:.85rem;line-height:1.9}
+.sheet table{width:100%;border-collapse:collapse;margin:10px 0}
+.sheet td,.sheet th{border:1px solid var(--gold);padding:6px 8px}
+.sheet th{background:#fbf3d5}
+.sheet td.k{background:#fbf3d5;width:14%;font-size:.8rem}
+.insp td.c{text-align:center;width:13%;font-size:1.1rem}
+.sheet ol{margin:4px 0;padding-inline-start:20px;font-size:.8rem}
+.foot{display:flex;justify-content:space-between;gap:10px;font-size:.8rem;margin-top:12px}
+@page{size:A4;margin:12mm}
+@media print{body{background:#fff}main{padding:0;max-width:none}.noprint{display:none!important}.sheet{border:2px solid var(--gold)}}
+</style>
+</head>
+<body><main id="app"></main>
+<script>
+const CFG={title:"کارشناسی خودروی پرواز",sub:"فرم ویژه تعویض پلاک",code:"۳۶۷۳۳۹",expert:"اسماعیل حیدری",
+ address:"اصفهان، دولت‌آباد، خیابان آزادگان شمالی، بعد از پارک معراج، نبش فرعی ۵ شرقی",phones:["۰۹۱۳۱۰۴۰۰۳۷","۰۳۱۴۵۸۲۷۸۲۴"]};
+const INFO=[["owner","نام و نام خانوادگی"],["vin","شماره شاسی"],["plate","شماره پلاک"],["color","رنگ"],["phone","شماره همراه"],["system","سیستم"]];
+const EXTRA=[["model","مدل"],["year","سال ساخت"],["km","کارکرد (کیلومتر)"],["price","قیمت کارشناسی (تومان)"]];
+const NUM=["phone","year","km","price"];
+const ROWS=["شاسی جلو راست","شاسی جلو چپ","شاسی عقب راست","شاسی عقب چپ","سقف و ستون","قسمت جلو","قسمت عقب"];
+const COLS=["خوردگی","خوردگی و رنگی","برش و تعویض"];
+const NOTES=["اعتبار این فرم پس از تاریخ صدور ۴۸ ساعت می‌باشد.","این برگه صرفاً جهت تعویض پلاک صادر شده و نشانگر وضعیت رنگ‌شدگی بدنه خودرو نمی‌باشد و هیچ ارزش دیگری ندارد.","این برگه فقط مختص شخص درخواست‌کننده می‌باشد و در صورت واگذاری به شخص دیگر، از درجه اعتبار ساقط می‌باشد."];
+const $=s=>document.querySelector(s), app=$("#app");
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const today=()=>new Date().toLocaleDateString("fa-IR-u-ca-persian");
+const now=()=>new Date().toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit",hour12:false});
+async function api(u,m="GET",b){
+  const r=await fetch(u,{method:m,headers:{"Content-Type":"application/json"},body:b?JSON.stringify(b):undefined});
+  if(r.status==401){login();throw 0} if(!r.ok) throw 0; return r.json();
+}
+function login(){
+  app.innerHTML=`<h1>ورود</h1><label>رمز</label><input id="pw" type="password"><p class="err" id="e"></p><button class="p" id="go">ورود</button>`;
+  const go=async()=>{try{await api("/api/login","POST",{password:$("#pw").value});list()}catch{$("#e").textContent="رمز اشتباه است"}};
+  $("#go").onclick=go; $("#pw").onkeydown=e=>e.key=="Enter"&&go();
+}
+async function list(q=""){
+  let rows; try{rows=await api("/api/cases?q="+encodeURIComponent(q))}catch{return}
+  app.innerHTML=`<h1>پرونده‌های کارشناسی</h1>
+  <div class="bar"><button class="p" id="new">پرونده جدید</button></div>
+  <input id="q" placeholder="جستجو: نام، پلاک، تلفن، سیستم، شماره شاسی" value="${esc(q)}">
+  <div style="margin-top:12px">${rows.map(r=>`<button class="item" data-id="${r.id}"><b>${esc(r.system||"بدون سیستم")} — ${esc(r.plate||"بدون پلاک")}</b><span>${esc(r.owner||"")} ${esc(r.phone||"")} ${esc(r.date||"")}</span></button>`).join("")||"<p>پرونده‌ای نیست.</p>"}</div>`;
+  $("#new").onclick=()=>form();
+  $("#q").onchange=e=>list(e.target.value);
+  app.querySelectorAll(".item").forEach(b=>b.onclick=()=>report(b.dataset.id));
+}
+const inp=(d,[k,l])=>`<div><label>${l}</label><input name="${k}" ${NUM.includes(k)?'inputmode="numeric"':""} value="${esc(d[k])}"></div>`;
+async function form(id){
+  let d={date:today(),time:now()}; if(id) d=await api("/api/cases/"+id);
+  app.innerHTML=`<h1>${id?"ویرایش":"پرونده جدید"}</h1>
+  <div class="grid">${[["date","تاریخ"],["time","ساعت"],...INFO].map(f=>inp(d,f)).join("")}</div>
+  <h3>مشخصات و قیمت کارشناسی</h3><div class="grid">${EXTRA.map(f=>inp(d,f)).join("")}</div>
+  <h3>وضعیت بازدید خودرو</h3>
+  ${ROWS.map((r,i)=>`<div class="rowbox"><b>${r}</b><div class="ck">${COLS.map((c,j)=>`<label><input type="checkbox" name="r${i}_${j}" ${d["r"+i+"_"+j]=="1"?"checked":""}>${c}</label>`).join("")}</div><input name="n${i}" placeholder="توضیحات" value="${esc(d["n"+i])}"></div>`).join("")}
+  <div class="bar"><button class="p" id="save">ذخیره</button><button id="back">انصراف</button></div>`;
+  $("#back").onclick=()=>id?report(id):list();
+  $("#save").onclick=async()=>{
+    const o={}; app.querySelectorAll("[name]").forEach(e=>o[e.name]=e.type=="checkbox"?(e.checked?"1":""):e.value);
+    const r=id?await api("/api/cases/"+id,"PUT",o):await api("/api/cases","POST",o);
+    report(r.id);
+  };
+}
+async function report(id){
+  const d=await api("/api/cases/"+id), v=k=>esc(d[k]||"");
+  let info="";for(let i=0;i<INFO.length;i+=3)info+="<tr>"+INFO.slice(i,i+3).map(([k,l])=>`<td class="k">${l}</td><td>${v(k)}</td>`).join("")+"</tr>";
+  let ex="";for(let i=0;i<EXTRA.length;i+=2)ex+="<tr>"+EXTRA.slice(i,i+2).map(([k,l])=>`<td class="k">${l}</td><td>${v(k)}</td>`).join("")+"</tr>";
+  app.innerHTML=`<div class="bar noprint"><button id="b">بازگشت</button><button class="p" id="pr">چاپ / ذخیره PDF</button><button id="ed">ویرایش</button><button class="d" id="del">حذف</button></div>
+  <div class="sheet"><div class="top"><div class="meta">تاریخ: ${v("date")}<br>ساعت: ${v("time")}<br>کد تخصصی: ${CFG.code}</div>
+  <div class="title"><h2>${CFG.title}</h2><div>${CFG.sub}</div></div></div>
+  <table>${info}</table><table>${ex}</table>
+  <h3>وضعیت بازدید خودرو:</h3>
+  <table class="insp"><tr><th>ارکان</th>${COLS.map(c=>`<th>${c}</th>`).join("")}<th>توضیحات</th></tr>
+  ${ROWS.map((r,i)=>`<tr><td>${r}</td>${COLS.map((c,j)=>`<td class="c">${d["r"+i+"_"+j]=="1"?"✓":""}</td>`).join("")}<td>${v("n"+i)}</td></tr>`).join("")}</table>
+  <h3>تذکر:</h3><ol>${NOTES.map(n=>`<li>${n}</li>`).join("")}</ol>
+  <div class="foot"><div>${CFG.address}<br>${CFG.phones.join(" ، ")}</div><div>مهر و امضا کارشناس:<br><b>${CFG.expert}</b></div></div></div>`;
+  $("#b").onclick=()=>list(); $("#ed").onclick=()=>form(id);
+  $("#pr").onclick=()=>{const t=document.title;document.title=`${d.system||""} ${d.owner||""}`.trim()||t;print();document.title=t};
+  $("#del").onclick=async()=>{if(confirm("این پرونده حذف شود؟")){await api("/api/cases/"+id,"DELETE");list()}};
+}
+list();
+</script>
+</body></html>
